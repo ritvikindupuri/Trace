@@ -32,7 +32,6 @@ import History from './components/history/History';
 
 import AttackSurfaceMap from './components/surface/AttackSurfaceMap';
 import SecurityIntelligence from './components/intelligence/SecurityIntelligence';
-import Auth from './components/auth/Auth';
 import LandingPage from './components/LandingPage';
 import GlobalSearch from './components/search/GlobalSearch';
 import { Badge } from './components/ui/badge';
@@ -40,30 +39,34 @@ import { Badge } from './components/ui/badge';
 type Page = 'dashboard' | 'telemetry' | 'scenarios' | 'surface' | 'gaps' | 'graph' | 'history' | 'intelligence';
 
 export default function App() {
+  const [showLanding, setShowLanding] = useState(true);
+
+  if (showLanding) {
+    return <LandingPage onGetStarted={() => setShowLanding(false)} />;
+  }
+
   return (
     <TooltipProvider>
       <TelemetryProvider>
         <Toaster position="top-right" expand={true} richColors closeButton />
-        <AppContent />
+        <AppContent onLogout={() => setShowLanding(true)} />
       </TelemetryProvider>
     </TooltipProvider>
   );
 }
 
-function AppContent() {
+function AppContent({ onLogout }: { onLogout: () => void }) {
   const { 
     resetSession, 
     activePage, 
     setActivePage, 
     isBootstrapping, 
     user, 
-    setUser, 
     notifications, 
     removeNotification,
     setSelectedThreatId 
   } = useTelemetry();
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showLanding, setShowLanding] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
 
   React.useEffect(() => {
@@ -77,18 +80,9 @@ function AppContent() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  if (showLanding && !user) {
-    return <LandingPage onGetStarted={() => setShowLanding(false)} />;
-  }
-
   const handleLogout = () => {
-    setUser(null);
-    setShowLanding(true);
+    onLogout();
   };
-
-  if (!user) {
-    return <Auth onLogin={setUser} onBackToLanding={() => setShowLanding(true)} />;
-  }
 
   if (isBootstrapping) {
     return (
@@ -267,9 +261,9 @@ function AppContent() {
 
             <div className="flex items-center gap-3 px-3 py-1.5 bg-[#F5F5F7] rounded-full border border-[#D2D2D7]">
               <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
-                {user?.name?.charAt(0).toUpperCase()}
+                {user?.displayName?.charAt(0).toUpperCase()}
               </div>
-              <span className="text-xs font-medium">{user?.name}</span>
+              <span className="text-xs font-medium">{user?.displayName}</span>
             </div>
             <Button 
               variant="ghost" 

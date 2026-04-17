@@ -30,18 +30,11 @@ graph TD
         WS[WebSocket Telemetry Stream]
     end
 
-    subgraph Persistence Layer
-        Auth[Firebase Authentication]
-        DB[Cloud Firestore / Real-time Database]
-    end
-
     UI <--> Ctx
     Ctx <--> AI
     Ctx <--> Sim
     Sim --> WS
     WS --> UI
-    Ctx <--> DB
-    Ctx <--> Auth
 ```
 
 <p align="center"><b>Figure 1: Trace Platform System Architecture</b></p>
@@ -51,7 +44,7 @@ graph TD
 2.  **Intelligence Synthesis**: When the user requests a threat analysis or visibility explanation, the context calls the **Gemini Intelligence Engine**. This engine analyzes current telemetry gaps and simulation history to provide expert-level insights.
 3.  **Simulation Execution**: When a scenario is launched, the **Simulation Controller** orchestrates a sequence of "Attacker" and "Defender" actions. These actions are emitted as raw JSON events through a **WebSocket Stream**, simulating a real macOS kernel-level telemetry source.
 4.  **Real-time Feedback**: The UI listens to the WebSocket stream, updating the **Telemetry Explorer** and **Behavior Graph** in real-time, creating a feel of live system monitoring.
-5.  **State Persistence**: All simulation history, custom scenarios, and notifications are synchronized with **Firebase Firestore**. This ensures that results are saved across sessions and collaborative history is maintained.
+5.  **Local Persistence**: All simulation history, custom scenarios, and notifications are saved to your browser's local storage. This ensures that results are saved across sessions.
 
 ---
 
@@ -59,7 +52,6 @@ graph TD
 - **Framework**: React 18 + Vite
 - **Styling**: Tailwind CSS + Shadcn UI
 - **AI Engine**: Google GenAI (Gemini SDK)
-- **Backend / Persistence**: Firebase (Firestore, Auth)
 - **State Management**: React Context API
 - **Visualization**: Recharts, Lucide React, Framer Motion
 - **Communication**: WebSockets (Real-time telemetry)
@@ -74,48 +66,52 @@ Follow these exact steps to launch Trace from scratch. No prior experience is re
 Trace requires a modern Node.js environment.
 - Go to [nodejs.org](https://nodejs.org/).
 - Download and install the **LTS (Long Term Support)** version.
-- Open your terminal (Command Prompt, PowerShell, or Terminal on macOS).
-- Type `node -v` and press Enter. You should see a version number (e.g., `v20.x.x`).
+- Verify the installation: Open your terminal and run:
+  ```bash
+  node -v
+  npm -v
+  ```
 
-### 2. Prepare the Project Directory
-- Navigate to the folder where you want the app to live.
-- Make sure you have all the source files in this folder.
+### 2. Clone and Prepare the Repository
+Open your terminal and run these commands in order:
+```bash
+# Clone the repository (if you have the URL)
+git clone https://github.com/your-username/trace.git
+
+# Enter the project directory
+cd trace
+```
 
 ### 3. Install Dependencies
-This step downloads all the "building blocks" (libraries) Trace needs.
-- In your terminal, make sure you are in the project folder.
-- Type the following command and press Enter:
-  ```bash
-  npm install
-  ```
-- Wait for the progress bar to finish. You may see some "vulnerabilities" warnings; these are typical for development environments—you can ignore them for now.
+This step downloads all the libraries Trace needs to run.
+```bash
+npm install
+```
 
-### 4. Configure Your Environment Keys
-Trace needs an AI key to think and a Firebase config to save data.
-- Look for a file named `.env.example` in the root folder.
-- Rename it to `.env` (or create a new file named `.env`).
-- Open `.env` in any text editor (Notepad, VS Code, etc.).
-- Add your **Gemini API Key**:
-  ```env
-  GEMINI_API_KEY=your_actual_key_here
-  ```
-- Add your **Firebase Configuration** (you can get this from the Firebase Console):
-  ```env
-  VITE_FIREBASE_API_KEY=...
-  VITE_FIREBASE_AUTH_DOMAIN=...
-  VITE_FIREBASE_PROJECT_ID=...
-  ```
+### 4. Configure Your Gemini AI Key
+Trace needs an AI key to generate simulations and analysis.
+```bash
+# Create a configuration file from the example
+cp .env.example .env
+```
+Now, open the newly created `.env` file in a text editor (Notepad, TextEdit, VS Code) and paste your Gemini API Key:
+```env
+GEMINI_API_KEY=your_actual_key_here
+```
 
-### 5. Launch the Development Server
-This starts the local web server so you can see the app.
-- In your terminal, type the following and press Enter:
-  ```bash
-  npm run dev
-  ```
-- The terminal will display a URL, usually `http://localhost:3000`.
-- Open your web browser (Chrome or Safari recommended) and go to that URL.
+### 5. Launch the Platform
+Start the local development server:
+```bash
+npm run dev
+```
+Trace will now be running at:
+**[http://localhost:3000](http://localhost:3000)**
 
 ### 6. Verify the Launch
+- Open up `http://localhost:3000` in Chrome or Safari.
 - You should see the Trace Landing Page.
-- Click **"Get Started"** to enter the Intelligence Engine.
-- If you see a loading spinner saying "Initializing Intelligence Engine," give it a moment to talk to Gemini AI for the first time.
+- Click **"Launch Console"** to enter the Intelligence Engine.
+- Give it a moment to initialize the Intelligence Engine for the first time.
+
+---
+© 2026 Trace Security Research. All rights reserved.

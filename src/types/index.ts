@@ -33,6 +33,8 @@ export interface AttackLogEntry {
   mitre_id?: string;
   command?: string;
   output?: string;
+  thought_before?: string;
+  thought_after?: string;
   actor?: 'attacker' | 'defender';
   analysis?: string;
 }
@@ -42,6 +44,14 @@ export interface AttackStep {
   order: number;
   description: string;
   mitre_mapping: MitreMapping;
+  attacker_thought_before?: string;
+  attacker_command?: string;
+  attacker_output?: string;
+  attacker_thought_after?: string;
+  defender_thought_before?: string;
+  defender_command?: string;
+  defender_output?: string;
+  defender_thought_after?: string;
   expected_signals: {
     event_type: string;
     category: EventCategory;

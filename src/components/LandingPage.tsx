@@ -47,7 +47,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             className="rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white text-[12px] font-medium h-7 px-4 transition-all active:scale-95"
             onClick={onGetStarted}
           >
-            Launch
+            Launch Console
           </Button>
         </div>
       </nav>
@@ -86,7 +86,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
                 className="rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white px-8 h-12 text-base font-semibold transition-all active:scale-95"
                 onClick={onGetStarted}
               >
-                Get Started
+                Launch Console
               </Button>
               <button className="text-[#0071E3] hover:underline text-base font-semibold flex items-center gap-1 group">
                 Learn more
@@ -334,7 +334,7 @@ export default function LandingPage({ onGetStarted }: LandingPageProps) {
             className="rounded-full bg-[#0071E3] hover:bg-[#0077ED] text-white px-12 h-16 text-xl font-semibold transition-all active:scale-95"
             onClick={onGetStarted}
           >
-            Launch Platform
+            Launch Console
           </Button>
         </motion.div>
       </section>

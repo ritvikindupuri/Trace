@@ -6,7 +6,7 @@ import SurfaceItemChat from './SurfaceItemChat';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { ScrollArea } from '../ui/scroll-area';
-import { Shield, AlertTriangle, CheckCircle2, Info, Lock, Search, Filter, Target, Database, Activity, ChevronRight, RefreshCw, Loader2, HelpCircle, BrainCircuit, Terminal, Cpu, Layers, Fingerprint } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle2, Info, Lock, Search, Filter, Target, Database, Activity, ChevronRight, RefreshCw, Loader2, HelpCircle, BrainCircuit, Terminal, Cpu, Layers, Fingerprint, MessageSquare } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import {
@@ -15,18 +15,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "../ui/dialog";
+import ScenarioInventoryChat from './ScenarioInventoryChat';
 import { Separator } from '../ui/separator';
 
 export default function AttackSurfaceMap() {
   const { attackSurface, recommendations, refreshAttackSurface, isScanning, researchAlignment, simulateAdversaryVsDefender, setActivePage, selectedScenarioId, history } = useTelemetry();
-  const [selectedItem, setSelectedItem] = React.useState<any>(null);
   const [isReRunning, setIsReRunning] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState<string | null>(null);
@@ -327,9 +320,126 @@ export default function AttackSurfaceMap() {
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <Activity size={16} className="text-blue-500" />
-                  Live Posture Score Calculation
+                  <BrainCircuit size={16} className="text-purple-500" />
+                  Simulation Comparison: Multi-Take Analysis
                 </CardTitle>
+                <CardDescription className="text-[11px]">Tracking attack surface evolution across sequential simulation runs.</CardDescription>
+              </div>
+              <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-100 text-[10px] font-bold">
+                Comparative Analysis
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="bg-[#F5F5F7]/50 border-b border-[#F5F5F7]">
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-[#86868B] sticky left-0 bg-[#FBFBFD] z-10">Attack Scenario</th>
+                    {Array.from({ length: Math.max(2, Array.from(new Set(history.map(h => h.scenario_id))).reduce((max, id) => Math.max(max, history.filter(h => h.scenario_id === id).length), 0)) }).map((_, i) => (
+                      <th key={i} className="p-4 text-[10px] font-bold uppercase tracking-widest text-[#86868B]">Take {i + 1}</th>
+                    ))}
+                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-[#86868B]">Evolution</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F5F5F7]">
+                  {history.length > 0 ? (
+                    Array.from(new Set(history.map(h => h.scenario_id))).map(scenarioId => {
+                      const takes = history.filter(h => h.scenario_id === scenarioId).reverse();
+                      const scenarioName = takes[0]?.scenario_name || "Unknown Attack";
+                      const maxTakes = Array.from(new Set(history.map(h => h.scenario_id))).reduce((max, id) => Math.max(max, history.filter(h => h.scenario_id === id).length), 0);
+                      
+                      return (
+                        <tr 
+                          key={scenarioId} 
+                          className={`hover:bg-[#FBFBFD] transition-colors cursor-pointer ${selectedScenarioContext === scenarioId ? 'bg-purple-50/50 border-l-4 border-l-purple-500' : ''}`}
+                          onClick={() => setSelectedScenarioContext(selectedScenarioContext === scenarioId ? null : scenarioId)}
+                        >
+                          <td className="p-4 sticky left-0 bg-white group-hover:bg-[#FBFBFD] z-10 border-r border-[#F5F5F7]">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-bold text-[#1D1D1F]">{scenarioName}</span>
+                              <span className="text-[10px] text-[#86868B] font-mono">{scenarioId}</span>
+                            </div>
+                          </td>
+                          {Array.from({ length: Math.max(2, maxTakes) }).map((_, i) => (
+                            <td key={i} className="p-4 min-w-[250px]">
+                              {takes[i] ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Badge className={`text-[9px] h-4 ${i === 0 ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
+                                      {i === 0 ? 'Initial' : `Take ${i + 1}`}
+                                    </Badge>
+                                    <span className="text-[11px] font-medium">{takes[i].events.length || 0} Events</span>
+                                  </div>
+                                  <p className="text-[10px] text-[#424245] leading-relaxed line-clamp-3">
+                                    {takes[i].aiAnalysis || "Telemetry observed."}
+                                  </p>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2 text-[#D2D2D7]">
+                                  <div className="w-1 h-1 rounded-full bg-[#D2D2D7]" />
+                                  <span className="text-[10px] italic">Awaiting simulation...</span>
+                                </div>
+                              )}
+                            </td>
+                          ))}
+                          <td className="p-4 min-w-[200px]">
+                            {takes.length > 1 ? (
+                              <div className="flex flex-col gap-2">
+                                <div className="flex items-center gap-1.5 text-green-600">
+                                  <Activity size={12} />
+                                  <span className="text-[10px] font-bold uppercase tracking-wider">Strategy Evolved</span>
+                                </div>
+                                <p className="text-[10px] text-[#86868B] leading-tight">
+                                  Observed {takes.length} iterations of tradecraft. Adversary shifted from standard execution to {takes.length > 2 ? 'advanced obfuscation and multi-stage payloads' : 'base64 encoded payloads'}.
+                                </p>
+                              </div>
+                            ) : (
+                              <span className="text-[10px] text-[#D2D2D7] uppercase font-bold tracking-widest">Baseline Only</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className="p-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-12 h-12 rounded-full bg-[#F5F5F7] flex items-center justify-center">
+                            <Activity size={20} className="text-[#D2D2D7]" />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-sm font-bold text-[#1D1D1F]">No Simulation Data Available</p>
+                            <p className="text-xs text-[#86868B]">Run a simulation to see attack surface evolution metrics.</p>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="mt-2 rounded-xl border-[#D2D2D7] text-xs font-bold"
+                            onClick={handleReRun}
+                          >
+                            Run Initial Simulation
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {selectedScenarioContext ? (
+          <>
+            <Card className="border-[#D2D2D7] rounded-3xl shadow-sm bg-white overflow-hidden">
+              <CardHeader className="border-b border-[#F5F5F7] bg-[#FBFBFD]">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                      <Activity size={16} className="text-blue-500" />
+                      Live Posture Score Calculation
+                    </CardTitle>
                 <CardDescription className="text-[11px]">Dynamic breakdown of current security metrics and simulation impact.</CardDescription>
               </div>
               <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-100 text-[10px] font-bold">
@@ -527,120 +637,6 @@ export default function AttackSurfaceMap() {
           </CardContent>
         </Card>
 
-        <Card className="border-[#D2D2D7] rounded-3xl shadow-sm bg-white overflow-hidden">
-          <CardHeader className="border-b border-[#F5F5F7] bg-[#FBFBFD]">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <CardTitle className="text-sm font-bold flex items-center gap-2">
-                  <BrainCircuit size={16} className="text-purple-500" />
-                  Simulation Comparison: Multi-Take Analysis
-                </CardTitle>
-                <CardDescription className="text-[11px]">Tracking attack surface evolution across sequential simulation runs.</CardDescription>
-              </div>
-              <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-100 text-[10px] font-bold">
-                Comparative Analysis
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="bg-[#F5F5F7]/50 border-b border-[#F5F5F7]">
-                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-[#86868B] sticky left-0 bg-[#FBFBFD] z-10">Attack Scenario</th>
-                    {Array.from({ length: Math.max(2, Array.from(new Set(history.map(h => h.scenario_id))).reduce((max, id) => Math.max(max, history.filter(h => h.scenario_id === id).length), 0)) }).map((_, i) => (
-                      <th key={i} className="p-4 text-[10px] font-bold uppercase tracking-widest text-[#86868B]">Take {i + 1}</th>
-                    ))}
-                    <th className="p-4 text-[10px] font-bold uppercase tracking-widest text-[#86868B]">Evolution</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#F5F5F7]">
-                  {history.length > 0 ? (
-                    Array.from(new Set(history.map(h => h.scenario_id))).map(scenarioId => {
-                      const takes = history.filter(h => h.scenario_id === scenarioId).reverse();
-                      const scenarioName = takes[0]?.scenario_name || "Unknown Attack";
-                      const maxTakes = Array.from(new Set(history.map(h => h.scenario_id))).reduce((max, id) => Math.max(max, history.filter(h => h.scenario_id === id).length), 0);
-                      
-                      return (
-                        <tr 
-                          key={scenarioId} 
-                          className={`hover:bg-[#FBFBFD] transition-colors cursor-pointer ${selectedScenarioContext === scenarioId ? 'bg-purple-50/50 border-l-4 border-l-purple-500' : ''}`}
-                          onClick={() => setSelectedScenarioContext(selectedScenarioContext === scenarioId ? null : scenarioId)}
-                        >
-                          <td className="p-4 sticky left-0 bg-white group-hover:bg-[#FBFBFD] z-10 border-r border-[#F5F5F7]">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-bold text-[#1D1D1F]">{scenarioName}</span>
-                              <span className="text-[10px] text-[#86868B] font-mono">{scenarioId}</span>
-                            </div>
-                          </td>
-                          {Array.from({ length: Math.max(2, maxTakes) }).map((_, i) => (
-                            <td key={i} className="p-4 min-w-[250px]">
-                              {takes[i] ? (
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2">
-                                    <Badge className={`text-[9px] h-4 ${i === 0 ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
-                                      {i === 0 ? 'Initial' : `Take ${i + 1}`}
-                                    </Badge>
-                                    <span className="text-[11px] font-medium">{takes[i].events.length || 0} Events</span>
-                                  </div>
-                                  <p className="text-[10px] text-[#424245] leading-relaxed line-clamp-3">
-                                    {takes[i].aiAnalysis || "Telemetry observed."}
-                                  </p>
-                                </div>
-                              ) : (
-                                <div className="flex items-center gap-2 text-[#D2D2D7]">
-                                  <div className="w-1 h-1 rounded-full bg-[#D2D2D7]" />
-                                  <span className="text-[10px] italic">Awaiting simulation...</span>
-                                </div>
-                              )}
-                            </td>
-                          ))}
-                          <td className="p-4 min-w-[200px]">
-                            {takes.length > 1 ? (
-                              <div className="flex flex-col gap-2">
-                                <div className="flex items-center gap-1.5 text-green-600">
-                                  <Activity size={12} />
-                                  <span className="text-[10px] font-bold uppercase tracking-wider">Strategy Evolved</span>
-                                </div>
-                                <p className="text-[10px] text-[#86868B] leading-tight">
-                                  Observed {takes.length} iterations of tradecraft. Adversary shifted from standard execution to {takes.length > 2 ? 'advanced obfuscation and multi-stage payloads' : 'base64 encoded payloads'}.
-                                </p>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-[#D2D2D7] uppercase font-bold tracking-widest">Baseline Only</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={4} className="p-12 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <div className="w-12 h-12 rounded-full bg-[#F5F5F7] flex items-center justify-center">
-                            <Activity size={20} className="text-[#D2D2D7]" />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-sm font-bold text-[#1D1D1F]">No Simulation Data Available</p>
-                            <p className="text-xs text-[#86868B]">Run a simulation to see attack surface evolution metrics.</p>
-                          </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="mt-2 rounded-xl border-[#D2D2D7] text-xs font-bold"
-                            onClick={handleReRun}
-                          >
-                            Run Initial Simulation
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           <div className="lg:col-span-8 space-y-6">
@@ -678,15 +674,10 @@ export default function AttackSurfaceMap() {
                           <p className="text-xs text-[#424245] leading-relaxed mb-4 line-clamp-2">
                             {item.description}
                           </p>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="w-full justify-between text-xs font-medium text-[#0071E3] hover:bg-blue-50 rounded-xl px-2"
-                            onClick={() => setSelectedItem(item)}
-                          >
-                            View Technical Details
-                            <ChevronRight size={14} />
-                          </Button>
+                          <div className="flex items-center gap-2 text-[10px] font-bold text-[#0071E3] uppercase tracking-widest">
+                            <MessageSquare size={12} />
+                            Chat to analyze
+                          </div>
                         </CardContent>
                       </Card>
                     </TooltipTrigger>
@@ -731,6 +722,11 @@ export default function AttackSurfaceMap() {
           </div>
 
           <div className="lg:col-span-4 space-y-6">
+            <ScenarioInventoryChat 
+              scenarioName={selectedScenarioContext ? (history.find(h => h.scenario_id === selectedScenarioContext)?.scenario_name || 'Selected Attack') : 'System Baseline'}
+              items={filteredSurface}
+            />
+
             <Card className="border-[#D2D2D7] rounded-3xl shadow-sm overflow-hidden">
               <CardHeader className="bg-[#F5F5F7]/50">
                 <div className="space-y-1">
@@ -788,127 +784,24 @@ export default function AttackSurfaceMap() {
             </Card>
           </div>
         </div>
-
-        <Dialog open={!!selectedItem} onOpenChange={() => setSelectedItem(null)}>
-          <DialogContent className="max-w-4xl w-[95vw] sm:w-[90vw] rounded-[2.5rem] p-0 overflow-hidden border-[#D2D2D7] shadow-2xl">
-            {selectedItem && (
-              <div className="flex flex-col max-h-[90vh] overflow-y-auto">
-                <div className={`h-2.5 w-full shrink-0 ${selectedItem.status === 'secure' ? 'bg-green-500' : selectedItem.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-                <div className="p-6 sm:p-10 space-y-8 sm:space-y-10">
-                  <DialogHeader className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <Badge variant="outline" className={`text-[11px] px-3 py-1 font-bold uppercase w-fit tracking-widest ${getStatusColor(selectedItem.status)}`}>
-                        {selectedItem.category.replace('_', ' ')}
-                      </Badge>
-                      <div className="flex items-center gap-2 text-[#86868B]">
-                        <Activity size={14} />
-                        <span className="text-[10px] sm:text-xs font-medium">Last Audited: {new Date(selectedItem.last_checked).toLocaleString()}</span>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <DialogTitle className="text-3xl sm:text-4xl font-bold tracking-tight flex items-center gap-4 text-[#1D1D1F]">
-                        {selectedItem.name}
-                        <div className="shrink-0">
-                          {getStatusIcon(selectedItem.status)}
-                        </div>
-                      </DialogTitle>
-                      <DialogDescription className="text-base sm:text-lg text-[#424245] leading-relaxed max-w-3xl">
-                        {selectedItem.description}
-                      </DialogDescription>
-                    </div>
-                  </DialogHeader>
-
-                  <div className="space-y-10">
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-2">
-                        <Terminal size={16} className="text-[#86868B]" />
-                        <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[#86868B]">Technical Metadata</h4>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                        <div className="flex items-center gap-4 p-5 rounded-[1.5rem] bg-[#F5F5F7] border border-[#E5E5E5] group/meta hover:border-[#D2D2D7] transition-colors">
-                          <div className="p-3 rounded-xl bg-white shadow-sm text-[#1D1D1F] shrink-0">
-                            <Target size={20} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-[#86868B] mb-0.5">Identifier</p>
-                            <p className="text-sm font-mono text-[#1D1D1F] break-all" title={selectedItem.id}>{selectedItem.id}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 p-5 rounded-[1.5rem] bg-[#F5F5F7] border border-[#E5E5E5] hover:border-[#D2D2D7] transition-colors">
-                          <div className="p-3 rounded-xl bg-white shadow-sm text-[#1D1D1F] shrink-0">
-                            <Cpu size={20} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-[#86868B] mb-0.5">Architecture</p>
-                            <p className="text-sm font-bold text-[#1D1D1F]">Universal (arm64e / x86_64)</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-4 p-5 rounded-[1.5rem] bg-[#F5F5F7] border border-[#E5E5E5] hover:border-[#D2D2D7] transition-colors">
-                          <div className="p-3 rounded-xl bg-white shadow-sm text-[#1D1D1F] shrink-0">
-                            <Layers size={20} />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-[#86868B] mb-0.5">Subsystem</p>
-                            <p className="text-sm font-bold text-[#1D1D1F] capitalize">{selectedItem.category.replace('_', ' ')}</p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-2">
-                        <BrainCircuit size={16} className="text-purple-500" />
-                        <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[#86868B]">Intelligence Chat</h4>
-                      </div>
-                      <SurfaceItemChat item={selectedItem} />
-                    </div>
-
-                    <div className="space-y-5">
-                      <div className="flex items-center gap-2">
-                        <Shield size={16} className="text-[#86868B]" />
-                        <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-[#86868B]">Security Context</h4>
-                      </div>
-                      <div className="p-6 sm:p-8 rounded-[2.5rem] border border-[#D2D2D7] bg-white shadow-sm flex flex-col md:grid md:grid-cols-12 items-center gap-8">
-                        <div className="md:col-span-4 flex items-center gap-5 w-full">
-                          <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-blue-50 flex items-center justify-center shadow-inner shrink-0">
-                            <Fingerprint size={36} className="text-blue-500" />
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-lg font-bold text-[#1D1D1F]">Code Signature</p>
-                            <Badge className={`text-[10px] font-bold uppercase px-2 py-0.5 ${selectedItem.status === 'secure' ? 'bg-green-500 text-white border-none' : 'bg-red-500 text-white border-none'}`}>
-                              {selectedItem.status === 'secure' ? 'Apple Signed' : 'Unsigned / Ad-hoc'}
-                            </Badge>
-                          </div>
-                        </div>
-                        <div className="hidden md:block md:col-span-1 justify-self-center">
-                          <div className="w-px h-16 bg-[#D2D2D7] opacity-50"></div>
-                        </div>
-                        <div className="md:col-span-7 w-full">
-                          <p className="text-sm sm:text-base leading-relaxed text-[#424245] font-medium">
-                            {selectedItem.status === 'secure' 
-                              ? "This component is verified by macOS Gatekeeper and resides in a protected system path, ensuring its integrity remains intact and preventing unauthorized modification." 
-                              : "This component lacks a valid developer signature and may bypass System Integrity Protection (SIP) controls if executed. This represents a critical persistence or execution risk."}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="pt-6 flex justify-end">
-                    <Button 
-                      className="rounded-full bg-[#1D1D1F] hover:bg-black text-white px-10 h-12 text-sm font-bold w-full sm:w-auto transition-transform hover:scale-105 active:scale-95"
-                      onClick={() => setSelectedItem(null)}
-                    >
-                      Close Details
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+      </>
+    ) : (
+      <div className="py-24 flex flex-col items-center justify-center border-2 border-dashed border-[#D2D2D7] rounded-[3rem] bg-white/50 space-y-4">
+        <div className="w-16 h-16 rounded-3xl bg-purple-50 flex items-center justify-center text-purple-500">
+          <BrainCircuit size={32} />
+        </div>
+        <div className="text-center space-y-2">
+          <h3 className="text-lg font-bold text-[#1D1D1F]">Ready for Deep Analysis</h3>
+          <p className="text-sm text-[#86868B] max-w-xs mx-auto leading-relaxed">
+            Select an attack scenario from the <strong>Multi-Take Analysis</strong> table above to explore how specific tradecraft impacts your system's security posture.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 mt-4 animate-pulse">
+          <Activity size={16} className="text-purple-400" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-[#86868B]">Awaiting Analyst Selection</span>
+        </div>
+      </div>
+    )}
       </div>
     </TooltipProvider>
   );

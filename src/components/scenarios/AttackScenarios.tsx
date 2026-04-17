@@ -510,27 +510,33 @@ export default function AttackScenarios() {
                         )}
                       </Button>
 
-                      <Button 
-                        variant="outline"
-                        className={`rounded-xl border-[#D2D2D7] text-[10px] h-10 px-6 font-bold uppercase transition-all active:scale-95 flex items-center gap-2 ${
-                          simulationStatus === 'running' ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600'
-                        }`}
-                        onClick={simulateAllScenarios}
-                        disabled={simulationStatus === 'running'}
-                      >
-                        <Zap size={14} className="text-yellow-500" />
-                        Run All Simulations
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger 
+                            className={`rounded-xl border border-[#D2D2D7] text-[10px] h-10 w-10 p-0 font-bold uppercase transition-all active:scale-95 flex items-center justify-center bg-white ${
+                              simulationStatus === 'running' ? 'opacity-50 cursor-not-allowed text-[#86868B]' : 'hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 text-[#424245]'
+                            }`}
+                            onClick={simulateAllScenarios}
+                            disabled={simulationStatus === 'running'}
+                          >
+                            <Zap size={14} className="text-yellow-500" />
+                          </TooltipTrigger>
+                          <TooltipContent>Run All Simulations</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
 
                       {simulationStatus === 'finished' && (
-                        <Button 
-                          variant="outline"
-                          className="rounded-xl border-[#D2D2D7] text-[10px] h-10 px-6 font-bold uppercase hover:bg-[#F5F5F7] transition-all active:scale-95 flex items-center gap-2"
-                          onClick={() => handleSimulate(selectedScenarioId)}
-                        >
-                          <History size={14} className="text-purple-500" />
-                          Re-run Attack
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger 
+                              className="rounded-xl border border-[#D2D2D7] text-[#424245] h-10 w-10 p-0 font-bold uppercase hover:bg-[#F5F5F7] transition-all active:scale-95 flex items-center justify-center bg-white"
+                              onClick={() => handleSimulate(selectedScenarioId)}
+                            >
+                              <History size={14} className="text-purple-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>Re-run Attack</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       )}
                     </div>
                     
@@ -648,7 +654,35 @@ export default function AttackScenarios() {
                             </div>
 
                             <div className="space-y-3">
-                              <label className="text-xs font-bold uppercase text-[#86868B]">Simulation Intensity</label>
+                              <div className="flex items-center gap-2">
+                                <label className="text-xs font-bold uppercase text-[#86868B]">Simulation Intensity</label>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger 
+                                      render={<HelpCircle size={12} className="text-[#86868B] cursor-help hover:text-[#1D1D1F] transition-colors" />}
+                                    />
+                                    <TooltipContent className="max-w-[280px] p-4 rounded-2xl border-[#D2D2D7] bg-white shadow-xl">
+                                      <div className="space-y-3">
+                                        <p className="text-[10px] font-bold uppercase text-[#86868B] tracking-widest">Intensity Mapping</p>
+                                        <div className="space-y-2">
+                                          <div>
+                                            <span className="text-[10px] font-bold text-[#1D1D1F]">LOW:</span>
+                                            <p className="text-[11px] text-[#86868B] leading-relaxed">Stealth focus. Uses standard binaries (LOLbins) and minimizes disk/network noise.</p>
+                                          </div>
+                                          <div>
+                                            <span className="text-[10px] font-bold text-[#1D1D1F]">MEDIUM:</span>
+                                            <p className="text-[11px] text-[#86868B] leading-relaxed">Standard emulation. Typical adversary behavior with moderate telemetry generation.</p>
+                                          </div>
+                                          <div>
+                                            <span className="text-[10px] font-bold text-[#1D1D1F]">HIGH:</span>
+                                            <p className="text-[11px] text-[#86868B] leading-relaxed">Full stress test. Loud, aggressive tradecraft designed to flood logs and test detection limits.</p>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              </div>
                               <div className="flex gap-2">
                                 {['low', 'medium', 'high'].map((intensity) => (
                                   <Button
@@ -890,13 +924,22 @@ export default function AttackScenarios() {
                                 <span>Telemetry: {log.message.replace('Telemetry Signal Detected: ', '')}</span>
                               </div>
                             ) : log.type === 'ai_analysis' ? (
-                              <div className={`flex items-start gap-2 py-2 ml-6 ${
-                                log.actor === 'attacker' ? 'text-orange-400/80' : 'text-blue-400/80'
+                              <div className={`flex flex-col gap-1 ml-6 py-2 ${
+                                log.actor === 'attacker' ? 'text-orange-400/90' : 'text-blue-400/90'
                               }`}>
-                                <BrainCircuit size={14} className="mt-0.5 shrink-0" />
-                                <p className="text-[11px] leading-relaxed italic font-medium">
-                                  {log.message}
-                                </p>
+                                <div className="flex items-center gap-1.5 opacity-60">
+                                  <BrainCircuit size={12} />
+                                  <span className="text-[9px] font-bold uppercase tracking-widest">
+                                    {log.actor === 'attacker' ? 'Adversary Thinking' : 'Defender Intel'}
+                                  </span>
+                                </div>
+                                <div className={`p-3 rounded-2xl border bg-white/5 shadow-inner ${
+                                  log.actor === 'attacker' ? 'border-orange-500/10' : 'border-blue-500/10'
+                                }`}>
+                                  <p className="text-[11px] leading-relaxed italic font-medium text-white/90">
+                                    {log.message}
+                                  </p>
+                                </div>
                               </div>
                             ) : log.message.startsWith('[SYSTEM]') ? (
                               null // Hide system logs in the main flow as they are redundant with STDOUT

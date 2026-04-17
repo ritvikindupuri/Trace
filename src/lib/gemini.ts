@@ -446,6 +446,30 @@ export async function analyzeAdversaryAction(stepDescription: string, previousOu
   }
 }
 
+export async function chatAboutScenarioInventory(scenarioName: string, items: any[], message: string, history: { role: 'user' | 'model', parts: string }[]) {
+  try {
+    const chat = ai.chats.create({
+      model: "gemini-3-flash-preview",
+      config: {
+        systemInstruction: `You are a macOS security research lead. You are discussing the attack surface inventory for a specific attack scenario with a security engineer.
+            
+            Scenario: ${scenarioName}
+            Inventory Items: ${JSON.stringify(items)}
+            
+            Your goal is to provide deep technical insights into how these items were impacted by the scenario, explain the tradecraft involved in their creation or modification, and suggest specific hardening steps for each. 
+            Keep the tone professional, authoritative, and research-oriented. Use proper spacing, headers, and bolding for readability.`
+      },
+      history: history.map(h => ({ role: h.role, content: { parts: [{ text: h.parts }] } }))
+    });
+
+    const result = await chat.sendMessage({ message });
+    return result.text;
+  } catch (error) {
+    console.error("Gemini API Error chatting about scenario inventory:", error);
+    return "I'm having trouble connecting to the intelligence engine right now. Please try again in a moment.";
+  }
+}
+
 export async function generateSimulationGaps(scenarioName: string, steps: any[]) {
   try {
     const prompt = `You are a detection engineer. Analyze the following macOS attack scenario and identify 0-2 realistic telemetry gaps that might exist in a standard corporate environment.
