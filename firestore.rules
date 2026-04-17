@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {uid}
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - createdAt: string (optional)
+    //
+    // Collection: simulations
+    // Document ID: {simulationId}
+    // Fields:
+    //   - uid: string (required) - Owner UID
+    //   - scenario_id: string (required)
+    //   - scenario_name: string (required)
+    //   - timestamp: string (required)
+    //   - events: string (required) - JSON stringified
+    //   - attackLogs: string (required) - JSON stringified
+    //   - gaps: string (required) - JSON stringified
+    //
+    // Collection: customScenarios
+    // Document ID: {scenarioId}
+    // Fields:
+    //   - uid: string (required) - Owner UID
+    //   - id: string (required)
+    //   - name: string (required)
+    //   - description: string (optional)
+    //   - severity: string (optional)
+    //   - steps: string (required) - JSON stringified
+    //
+    // Collection: notifications
+    // Document ID: {notificationId}
+    // Fields:
+    //   - uid: string (required) - Recipient UID
+    //   - title: string (required)
+    //   - summary: string (optional)
+    //   - type: string (required)
+    //   - timestamp: string (required)
+    //   - read: bool (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+             data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             (data.displayName is string || !('displayName' in data)) &&
+             (isValidDateString(data.createdAt) || !('createdAt' in data));
+    }
+
+    function isValidSimulation(data) {
+      return data.keys().hasAll(['uid', 'scenario_id', 'scenario_name', 'timestamp', 'events', 'attackLogs', 'gaps']) &&
+             data.uid == request.auth.uid &&
+             data.scenario_id is string &&
+             data.scenario_name is string &&
+             isValidDateString(data.timestamp) &&
+             data.events is string &&
+             data.attackLogs is string &&
+             data.gaps is string;
+    }
+
+    function isValidCustomScenario(data) {
+      return data.keys().hasAll(['uid', 'id', 'name', 'steps']) &&
+             data.uid == request.auth.uid &&
+             data.id is string &&
+             data.name is string &&
+             data.steps is string &&
+             (data.severity in ['low', 'medium', 'high', 'critical'] || !('severity' in data));
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['uid', 'title', 'timestamp', 'type']) &&
+             data.uid is string &&
+             data.title is string &&
+             isValidDateString(data.timestamp) &&
+             data.type in ['info', 'warning', 'threat', 'success'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && isValidUser(request.resource.data);
+      allow update: if isOwner(uid) && isValidUser(request.resource.data);
+    }
+
+    match /simulations/{simulationId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidSimulation(request.resource.data);
+      allow update: if isDocOwner() && isValidSimulation(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /customScenarios/{scenarioId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidCustomScenario(request.resource.data);
+      allow update: if isDocOwner() && isValidCustomScenario(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid);
+      allow create: if isAuthenticated() && isValidNotification(request.resource.data);
+      allow update: if isDocOwner() && isValidNotification(request.resource.data);
+      allow delete: if isDocOwner();
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "name": "Trace",
+  "description": "macOS telemetry intelligence and adversary behavior analysis platform. Model system behavior, analyze tradecraft, and identify telemetry gaps.",
+  "requestFramePermissions": []
+}
