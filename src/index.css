@@ -130,19 +130,39 @@ body {
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-background text-foreground;
-    }
+    @apply bg-white text-ink antialiased;
+    background-image: radial-gradient(#E5E5E7 1px, transparent 1px);
+    background-size: 32px 32px;
+    background-attachment: fixed;
+  }
   html {
     @apply font-sans;
     }
 }
 
+@theme {
+  --color-primary: #0071E3;
+  --color-accent: #5E5CE6;
+  --color-surface: #F5F5F7;
+  --color-ink: #1D1D1F;
+}
+
+@layer components {
+  .forensic-panel {
+    @apply bg-white/70 backdrop-blur-3xl border border-[#D2D2D7]/50 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.08)];
+  }
+  
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-xl border border-white/40 shadow-[0_2px_12px_rgba(0,0,0,0.04)];
+  }
+}
+
 .markdown-body {
-  @apply space-y-4;
+  @apply text-sm leading-relaxed space-y-4;
 }
 
 .markdown-body h1, .markdown-body h2, .markdown-body h3 {
-  @apply font-bold tracking-tight mt-6 mb-4;
+  @apply font-bold tracking-tight mt-6 mb-4 text-ink;
 }
 
 .markdown-body h1 { @apply text-2xl; }
@@ -150,7 +170,7 @@ body {
 .markdown-body h3 { @apply text-lg; }
 
 .markdown-body p {
-  @apply leading-relaxed mb-4;
+  @apply leading-relaxed mb-4 text-ink/80;
 }
 
 .markdown-body ul, .markdown-body ol {
@@ -166,19 +186,23 @@ body {
 }
 
 .markdown-body li {
-  @apply leading-relaxed;
+  @apply leading-relaxed text-ink/80;
 }
 
 .markdown-body strong {
-  @apply font-bold text-inherit;
+  @apply font-bold text-ink;
 }
 
 .markdown-body code {
-  @apply font-mono bg-black/10 px-1 rounded text-sm;
+  @apply font-mono bg-blue-500/10 text-blue-600 px-1.5 py-0.5 rounded text-[13px];
+}
+
+.markdown-body pre {
+  @apply p-6 bg-[#1D1D1F] rounded-2xl font-mono text-xs text-blue-400 overflow-x-auto my-6 shadow-2xl border border-white/5;
 }
 
 .markdown-body blockquote {
-  @apply border-l-4 border-gray-300 pl-4 italic my-4;
+  @apply border-l-4 border-blue-500 bg-blue-500/5 p-4 rounded-r-xl italic my-6 text-ink/60;
 }
 
 .scrollbar-visible::-webkit-scrollbar {

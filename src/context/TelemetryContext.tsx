@@ -72,7 +72,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       _setSelectedScenarioId(id);
     }
   };
-  const [user, setUser] = useState<any | null>({ uid: 'guest', email: 'guest@trace.os', displayName: 'Guest Investigator' });
+  const [user, setUser] = useState<any | null>(null);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [selectedThreatId, setSelectedThreatId] = useState<string | null>(null);
   const [aiScenarios, setAiScenarios] = useState<AttackScenario[]>(PREDEFINED_SCENARIOS);
@@ -294,9 +294,10 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
 
   const injectBackgroundNoise = () => {
     const noiseProcesses = [
-      { name: 'mds', cmd: '/System/Library/Frameworks/CoreServices.framework/Frameworks/Metadata.framework/Support/mds', cat: 'file_system' as const },
-      { name: 'lsd', cmd: '/usr/libexec/lsd', cat: 'execution' as const },
-      { name: 'tccd', cmd: '/System/Library/PrivateFrameworks/TCC.framework/Support/tccd', cat: 'tcc' as const }
+      { name: 'mds', cmd: '/System/Library/Frameworks/CoreServices.framework/Frameworks/Metadata.framework/Support/mds', cat: 'file_system' as const, sid: 'com.apple.mds' },
+      { name: 'lsd', cmd: '/usr/libexec/lsd', cat: 'execution' as const, sid: 'com.apple.lsd' },
+      { name: 'tccd', cmd: '/System/Library/PrivateFrameworks/TCC.framework/Support/tccd', cat: 'tcc' as const, sid: 'com.apple.tccd' },
+      { name: 'trustd', cmd: '/usr/libexec/trustd', cat: 'credential_access' as const, sid: 'com.apple.trustd' }
     ];
 
     const count = Math.floor(Math.random() * 2) + 1;
@@ -315,7 +316,13 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
         user: 'root',
         command_line: proc.cmd,
         source: 'esf',
-        entities: ['process', 'user']
+        entities: ['process', 'user'],
+        codesigning: {
+          signing_id: proc.sid,
+          team_id: 'APPLE',
+          status: 'signed_apple'
+        },
+        es_category: 'NOTIFY'
       });
     }
 
@@ -424,16 +431,22 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       const event: NormalizedEvent = {
         event_id: `ev-${Date.now()}`,
         timestamp: new Date().toISOString(),
-        event_type: 'ES_EVENT_TYPE_NOTIFY_EXEC',
-        category: 'execution',
-        process_name: 'bash',
+        event_type: step.expected_signals[0]?.event_type || 'ES_EVENT_TYPE_NOTIFY_EXEC',
+        category: step.expected_signals[0]?.category || 'execution',
+        process_name: step.expected_signals[0]?.process_name || 'bash',
         pid: Math.floor(Math.random() * 10000).toString(),
         parent_pid: '1',
         user: 'root',
         command_line: command,
         source: 'esf',
         entities: ['process', 'user'],
-        mitre_mapping: step.mitre_mapping
+        mitre_mapping: step.mitre_mapping,
+        codesigning: step.expected_signals[0]?.metadata?.codesigning || {
+          signing_id: 'com.apple.bash',
+          team_id: 'APPLE',
+          status: 'signed_apple'
+        },
+        es_category: step.expected_signals[0]?.metadata?.es_category || 'NOTIFY'
       };
       currentEvents.push(event);
       setEvents(prev => [...prev, event]);
@@ -454,7 +467,22 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       gaps: [...currentGaps],
       anomalies: [...currentAnomalies]
     };
-    setHistory(prev => [newHistoryItem, ...prev]);
+    
+    setHistory(prev => {
+      const newHistory = [newHistoryItem, ...prev];
+      // Check for simulation advice after history updates
+      const runCount = newHistory.filter(h => h.scenario_id === scenario.id).length;
+      getSimulationAdvisorNotification(scenario.name, runCount).then(advice => {
+        if (advice && advice.shouldNotify && advice.message) {
+          addNotification({
+            title: 'Simulation Advisor',
+            summary: advice.message,
+            type: 'info'
+          });
+        }
+      });
+      return newHistory;
+    });
   };
 
   const simulateAdversaryVsDefender = async (scenarioId: string) => {
@@ -504,8 +532,8 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       const event: NormalizedEvent = {
         event_id: `ev-${Date.now()}`,
         timestamp: new Date().toISOString(),
-        event_type: 'ES_EVENT_TYPE_NOTIFY_EXEC',
-        category: 'execution',
+        event_type: step.expected_signals[0]?.event_type || 'ES_EVENT_TYPE_NOTIFY_EXEC',
+        category: step.expected_signals[0]?.category || 'execution',
         process_name: step.expected_signals[0]?.process_name || 'task',
         pid: Math.floor(Math.random() * 10000).toString(),
         parent_pid: '1',
@@ -513,7 +541,13 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
         command_line: step.attacker_command || step.expected_signals[0]?.command_line || 'bash',
         source: 'esf',
         entities: ['process', 'user'],
-        mitre_mapping: step.mitre_mapping
+        mitre_mapping: step.mitre_mapping,
+        codesigning: step.expected_signals[0]?.metadata?.codesigning || {
+          signing_id: 'com.apple.bash',
+          team_id: 'APPLE',
+          status: 'signed_apple'
+        },
+        es_category: step.expected_signals[0]?.metadata?.es_category || 'NOTIFY'
       };
       currentEvents.push(event);
       setEvents(prev => [...prev, event]);
@@ -578,7 +612,22 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       gaps: [],
       anomalies: []
     };
-    setHistory(prev => [newHistoryItem, ...prev]);
+
+    setHistory(prev => {
+      const newHistory = [newHistoryItem, ...prev];
+      // Check for simulation advice after history updates
+      const runCount = newHistory.filter(h => h.scenario_id === scenario.id).length;
+      getSimulationAdvisorNotification(scenario.name, runCount).then(advice => {
+        if (advice && advice.shouldNotify && advice.message) {
+          addNotification({
+            title: 'Simulation Advisor',
+            summary: advice.message,
+            type: 'info'
+          });
+        }
+      });
+      return newHistory;
+    });
   };
 
   const simulateAllScenarios = async () => {

@@ -1,5 +1,47 @@
 export type EventCategory = 'execution' | 'persistence' | 'file_system' | 'network' | 'privilege' | 'tcc' | 'sip' | 'xprotect' | 'credential_access' | 'discovery';
 
+export interface Artifact {
+  id: string;
+  name: string;
+  type: 'file' | 'command_output';
+  content: string;
+  mimeType?: string;
+  timestamp: string;
+  size?: number;
+}
+
+export interface AuditFinding {
+  id: string;
+  title: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  category: 'privacy' | 'persistence' | 'system' | 'network' | 'entitlements' | 'mdm';
+  description: string;
+  remediation: string;
+  evidence: {
+    artifactId: string;
+    snippet: string;
+    lineStart?: number;
+    lineEnd?: number;
+  }[];
+}
+
+export interface AuditReport {
+  id: string;
+  timestamp: string;
+  workflow: 'posture' | 'filevault' | 'mdm' | 'privacy' | 'custom';
+  findings: AuditFinding[];
+  summary: string;
+  score: number; // 0-100
+}
+
+export interface AuditWorkflow {
+  id: string;
+  name: string;
+  description: string;
+  type: AuditReport['workflow'];
+  icon: string;
+}
+
 export interface MitreMapping {
   tactic: string;
   technique_id: string;
@@ -20,6 +62,12 @@ export interface NormalizedEvent {
   source: 'esf' | 'unified_log' | 'osquery' | 'simulator';
   entities: string[];
   mitre_mapping?: MitreMapping;
+  codesigning?: {
+    signing_id?: string;
+    team_id?: string;
+    status: 'signed_apple' | 'signed_dev' | 'unsigned' | 'adhoch';
+  };
+  es_category?: 'AUTH' | 'NOTIFY';
   metadata?: Record<string, any>;
 }
 
@@ -59,6 +107,7 @@ export interface AttackStep {
     process_name?: string;
     command_line?: string;
     file_path?: string;
+    metadata?: Record<string, any>;
   }[];
 }
 

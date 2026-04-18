@@ -203,7 +203,7 @@ export default function SecurityIntelligence() {
             </CardHeader>
             <CardContent className="space-y-8 pt-6">
               <div className="space-y-4">
-                <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-p:text-white/90 prose-strong:text-blue-400 prose-code:bg-white/10 prose-code:text-blue-300 prose-code:px-1 prose-code:rounded">
+                <div className="markdown-body">
                   <ReactMarkdown>
                     {researchAlignment?.description || 'The Intelligence Engine is currently processing recent vulnerability disclosures and adversary emulation data to align your research environment with real-world threats.'}
                   </ReactMarkdown>
@@ -216,7 +216,7 @@ export default function SecurityIntelligence() {
                     <Zap size={18} className="group-hover/tip:scale-110 transition-transform" />
                     <span className="text-xs font-bold uppercase tracking-widest">Analyst Tip</span>
                   </div>
-                  <div className="prose prose-invert prose-sm max-w-none opacity-90 leading-relaxed break-words">
+                  <div className="markdown-body opacity-90 text-white">
                     <ReactMarkdown>
                       {researchAlignment?.analystTip || 'Monitor for unusual XPC communication patterns between unsigned processes and system services.'}
                     </ReactMarkdown>
@@ -227,7 +227,7 @@ export default function SecurityIntelligence() {
                     <Target size={18} className="group-hover/focus:scale-110 transition-transform" />
                     <span className="text-xs font-bold uppercase tracking-widest">Research Focus</span>
                   </div>
-                  <div className="prose prose-invert prose-sm max-w-none opacity-90 leading-relaxed break-words">
+                  <div className="markdown-body opacity-90 text-white">
                     <ReactMarkdown>
                       {researchAlignment?.researchFocus || 'Focus on TCC bypasses involving transparency overrides in ~/Library/Application Support/com.apple.TCC.'}
                     </ReactMarkdown>

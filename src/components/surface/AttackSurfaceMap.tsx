@@ -9,22 +9,19 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Shield, AlertTriangle, CheckCircle2, Info, Lock, Search, Filter, Target, Database, Activity, ChevronRight, RefreshCw, Loader2, HelpCircle, BrainCircuit, Terminal, Cpu, Layers, Fingerprint, MessageSquare } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
-import ScenarioInventoryChat from './ScenarioInventoryChat';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
+import ForensicEvidenceChat from './ForensicEvidenceChat';
 import { Separator } from '../ui/separator';
 
 export default function AttackSurfaceMap() {
-  const { attackSurface, recommendations, refreshAttackSurface, isScanning, researchAlignment, simulateAdversaryVsDefender, setActivePage, selectedScenarioId, history } = useTelemetry();
+  const { attackSurface, recommendations, refreshAttackSurface, isScanning, researchAlignment, simulateAdversaryVsDefender, setActivePage, selectedScenarioId, history, events, scenarios } = useTelemetry();
   const [isReRunning, setIsReRunning] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [filterStatus, setFilterStatus] = React.useState<string | null>(null);
   const [filterTactic, setFilterTactic] = React.useState<string | null>(null);
   const [selectedScenarioContext, setSelectedScenarioContext] = React.useState<string | null>(null);
+
+  const hasActiveTelemetry = history.length > 0 || events.length > 0;
 
   const filteredSurface = attackSurface.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -32,7 +29,25 @@ export default function AttackSurfaceMap() {
                          item.category.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus ? item.status === filterStatus : true;
     const matchesTactic = filterTactic ? item.tactic === filterTactic : true;
-    const matchesScenario = selectedScenarioContext ? item.scenario_id === selectedScenarioContext : true;
+    
+    // Forensic Evidence Vault Filtering:
+    // 1. If no scenario selected, show all (Overall Posture).
+    // 2. If scenario selected, transform into an Evidence Vault:
+    //    - Show all items explicitly injected by the simulation.
+    //    - Show baseline items ONLY if they are 'warning'' or 'vulnerable' AND relevant to the attack tactics.
+    //    - This strips away "Secure" baseline noise to focus on forensic evidence.
+    let matchesScenario = true;
+    if (selectedScenarioContext) {
+      const isExplicitlyForScenario = item.scenario_id === selectedScenarioContext;
+      const isBaseline = !item.scenario_id || item.scenario_id === 'baseline';
+      
+      const selectedScenario = scenarios.find(s => s.id === selectedScenarioContext);
+      const scenarioTactics = new Set(selectedScenario?.steps.map(step => step.mitre_mapping.tactic) || []);
+      const isRelevantTactic = item.tactic && scenarioTactics.has(item.tactic);
+
+      matchesScenario = isExplicitlyForScenario || (isBaseline && isRelevantTactic && item.status !== 'secure');
+    }
+
     return matchesSearch && matchesFilter && matchesTactic && matchesScenario;
   });
 
@@ -63,8 +78,8 @@ export default function AttackSurfaceMap() {
   const totalCount = attackSurface.length;
   const posturePercentage = totalCount > 0 ? Math.round((secureCount / totalCount) * 100) : 0;
   
-  const extensionCount = attackSurface.filter(s => s.category === 'system_extension' || s.category === 'launch_item').length;
-  const tccCount = attackSurface.filter(s => s.category === 'tcc_permission').length;
+  const extensionCount = hasActiveTelemetry ? attackSurface.filter(s => s.category === 'system_extension' || s.category === 'launch_item').length : 0;
+  const tccCount = hasActiveTelemetry ? attackSurface.filter(s => s.category === 'tcc_permission').length : 0;
 
   const handleReRun = async () => {
     if (!selectedScenarioId) {
@@ -642,13 +657,77 @@ export default function AttackSurfaceMap() {
           <div className="lg:col-span-8 space-y-6">
             <div className="flex items-center justify-between px-1">
               <div className="space-y-1">
-                <h3 className="text-lg font-semibold">Surface Inventory</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold">{selectedScenarioContext ? 'Forensic Evidence Vault' : 'Surface Inventory'}</h3>
+                  <Tooltip>
+                    <TooltipTrigger className="flex items-center justify-center text-[#86868B] hover:text-[#1D1D1F] transition-all p-1 rounded-full hover:bg-[#F5F5F7] outline-none">
+                      <HelpCircle size={15} />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-[340px] p-0 rounded-2xl border-[#D2D2D7] bg-white shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden">
+                      <div className="bg-[#1D1D1F] border-b border-[#333] p-4 flex items-center gap-3 text-white">
+                        <div className="w-8 h-8 rounded-lg bg-red-950 flex items-center justify-center text-red-500">
+                          <Fingerprint size={16} />
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-widest text-red-400">Forensic Intelligence</p>
+                          <p className="text-xs font-bold">Evidence Vault Strategy</p>
+                        </div>
+                      </div>
+                      <div className="p-5 space-y-5">
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold text-red-600 uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+                            1. Artifact Injection
+                          </p>
+                          <p className="text-[11px] leading-relaxed text-[#424245]">
+                            Identifies <strong>newly created risks</strong> purely from the simulation (e.g. dropped plists). These are direct forensic footprints.
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold text-purple-600 uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-purple-600" />
+                            2. Tactic Mapping
+                          </p>
+                          <p className="text-[11px] leading-relaxed text-[#424245]">
+                            The engine cross-references the <strong>MITRE Tactics</strong> of the attack with your machine's pre-existing baseline vulnerabilities.
+                          </p>
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-[11px] font-bold text-blue-600 uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                            3. Exploitation Context
+                          </p>
+                          <p className="text-[11px] leading-relaxed text-[#424245]">
+                            Distinguishes between <strong>Evidence</strong> (simulation-born) and <strong>Exploited Baseline</strong> (weaknesses an adversary leveraged).
+                          </p>
+                        </div>
+
+                        <div className="space-y-1 border-t border-[#F5F5F7] pt-4">
+                          <p className="text-[11px] font-bold text-[#1D1D1F] uppercase tracking-wider flex items-center gap-2">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#1D1D1F]" />
+                            Noise Reduction
+                          </p>
+                          <p className="text-[11px] leading-relaxed text-[#86868B]">
+                            All "Secure" baseline data is hidden during simulations to focus entirely on the <strong>active clash</strong> between intent and system state.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="bg-[#F5F5F7]/50 p-3 px-5 border-t border-[#F5F5F7]">
+                        <p className="text-[10px] italic text-[#86868B] leading-tight">
+                          Focusing purely on the "Clash"—the intersection of adversary intent and system vulnerability.
+                        </p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <p className="text-[10px] text-[#86868B] font-bold uppercase tracking-widest">
-                  Context: {selectedScenarioContext ? (history.find(h => h.scenario_id === selectedScenarioContext)?.scenario_name || 'Selected Scenario') : 'System Baseline'}
+                  {selectedScenarioContext ? 'Triaging Attack Artifacts' : 'System Posture Mapping'}
                 </p>
               </div>
-              <Badge variant="outline" className="text-[10px] font-bold text-[#86868B] border-[#D2D2D7]">
-                {searchTerm || filterStatus ? `${filteredSurface.length} of ${totalCount} Items` : `${totalCount} Items Tracked`}
+              <Badge variant="outline" className={`text-[10px] font-bold border-[#D2D2D7] ${selectedScenarioContext ? 'bg-red-50 text-red-600 border-red-100' : 'text-[#86868B]'}`}>
+                {selectedScenarioContext ? `${filteredSurface.length} Evidence Markers` : `${totalCount} Items Tracked`}
               </Badge>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -656,16 +735,25 @@ export default function AttackSurfaceMap() {
                 filteredSurface.map((item) => (
                   <Tooltip key={item.id}>
                     <TooltipTrigger render={<div className="w-full" />}>
-                      <Card className="border-[#D2D2D7] hover:shadow-md transition-shadow rounded-2xl overflow-hidden cursor-help">
+                      <Card className={`border-[#D2D2D7] hover:shadow-lg transition-all rounded-2xl overflow-hidden cursor-help group ${item.scenario_id ? 'border-red-200 shadow-sm' : ''}`}>
                         <div className={`h-1 w-full ${item.status === 'secure' ? 'bg-green-500' : item.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
                         <CardHeader className="p-5 pb-2">
                           <div className="flex items-center justify-between">
-                            <Badge variant="outline" className={`text-[9px] font-bold uppercase ${getStatusColor(item.status)}`}>
-                              {item.category.replace('_', ' ')}
-                            </Badge>
-                            <span className="text-[10px] text-[#86868B]">{new Date(item.last_checked).toLocaleDateString()}</span>
+                            <div className="flex items-center gap-2">
+                              {item.scenario_id ? (
+                                <Badge variant="secondary" className="text-[8px] font-bold uppercase bg-red-600 text-white border-transparent flex items-center gap-1">
+                                  <Fingerprint size={8} /> Evidence
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[8px] font-bold uppercase bg-[#F5F5F7] text-[#86868B] border-transparent">Exploited Baseline</Badge>
+                              )}
+                              <Badge variant="outline" className={`text-[9px] font-bold uppercase ${getStatusColor(item.status)}`}>
+                                {item.category.replace('_', ' ')}
+                              </Badge>
+                            </div>
+                            <span className="text-[10px] text-[#86868B] font-mono">#{item.id.split('-')[1]}</span>
                           </div>
-                          <CardTitle className="text-base mt-3 flex items-center gap-2">
+                          <CardTitle className="text-base mt-4 flex items-center gap-2 text-[#1D1D1F]">
                             {item.name}
                             {getStatusIcon(item.status)}
                           </CardTitle>
@@ -674,47 +762,47 @@ export default function AttackSurfaceMap() {
                           <p className="text-xs text-[#424245] leading-relaxed mb-4 line-clamp-2">
                             {item.description}
                           </p>
-                          <div className="flex items-center gap-2 text-[10px] font-bold text-[#0071E3] uppercase tracking-widest">
-                            <MessageSquare size={12} />
-                            Chat to analyze
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-[#0071E3] uppercase tracking-widest group-hover:translate-x-1 transition-transform">
+                              <Terminal size={12} />
+                              Digital Triage
+                            </div>
+                            <span className="text-[10px] text-[#86868B] italic">Observed {new Date(item.last_checked).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                           </div>
                         </CardContent>
                       </Card>
                     </TooltipTrigger>
                     <TooltipContent className="p-4 rounded-2xl border-[#D2D2D7] bg-white shadow-xl max-w-xs">
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         <p className="text-xs font-bold text-[#1D1D1F] flex items-center gap-2">
-                          <Database size={14} className="text-blue-500" />
-                          Surface Intelligence
+                          <Fingerprint size={14} className="text-red-500" />
+                          Forensic Context
                         </p>
                         <p className="text-[11px] text-[#424245] leading-relaxed">
                           {item.description}
-                          <br /><br />
-                          <strong>Category:</strong> {item.category.replace('_', ' ')}
-                          <br />
-                          <strong>Status:</strong> {item.status?.toUpperCase() || 'UNKNOWN'}
                         </p>
+                        <Separator />
+                        <div className="space-y-1">
+                           <p className="text-[10px] font-bold uppercase text-[#86868B]">Integrity Verification</p>
+                           <p className="text-[10px] text-[#1D1D1F]">Status: <span className={getStatusColor(item.status).split(' ')[0]}>{item.status?.toUpperCase() || 'UNKNOWN'}</span></p>
+                           <p className="text-[10px] text-[#1D1D1F]">Tactic: <strong>{item.tactic || 'None Detected'}</strong></p>
+                        </div>
                       </div>
                     </TooltipContent>
                   </Tooltip>
                 ))
               ) : (
-                <div className="col-span-full py-12 text-center border-2 border-dashed border-[#D2D2D7] rounded-3xl">
-                  <div className="flex flex-col items-center gap-3">
-                    <Search size={32} className="text-[#86868B] opacity-20" />
-                    <p className="text-sm font-bold text-[#1D1D1F]">No matching items found</p>
-                    <p className="text-xs text-[#86868B]">Try adjusting your search or filter criteria.</p>
-                    <Button 
-                      variant="link" 
-                      className="text-blue-600 text-xs font-bold"
-                      onClick={() => {
-                        setSearchTerm('');
-                        setFilterStatus(null);
-                        setFilterTactic(null);
-                      }}
-                    >
-                      Clear all filters
-                    </Button>
+                <div className="col-span-full py-20 text-center border-2 border-dashed border-[#D2D2D7] rounded-3xl bg-[#FBFBFD]">
+                  <div className="flex flex-col items-center gap-4">
+                    <div className="w-16 h-16 rounded-full bg-[#F5F5F7] flex items-center justify-center">
+                      <Fingerprint size={32} className="text-[#D2D2D7]" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-md font-bold text-[#1D1D1F]">Zero Evidence Markers Found</p>
+                      <p className="text-sm text-[#86868B] max-w-[300px] mx-auto">
+                        No malicious artifacts or compromised baseline configurations were detected for this scenario. The "Clash" remains clean.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
@@ -722,7 +810,7 @@ export default function AttackSurfaceMap() {
           </div>
 
           <div className="lg:col-span-4 space-y-6">
-            <ScenarioInventoryChat 
+            <ForensicEvidenceChat 
               scenarioName={selectedScenarioContext ? (history.find(h => h.scenario_id === selectedScenarioContext)?.scenario_name || 'Selected Attack') : 'System Baseline'}
               items={filteredSurface}
             />

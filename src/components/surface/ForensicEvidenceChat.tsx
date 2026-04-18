@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Loader2, User, BrainCircuit, Sparkles, Database } from 'lucide-react';
+import { Send, Loader2, User, BrainCircuit, Sparkles, Database, Fingerprint } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
@@ -11,12 +11,12 @@ interface Message {
   parts: string;
 }
 
-interface ScenarioInventoryChatProps {
+interface ForensicEvidenceChatProps {
   scenarioName: string;
   items: any[];
 }
 
-export default function ScenarioInventoryChat({ scenarioName, items }: ScenarioInventoryChatProps) {
+export default function ForensicEvidenceChat({ scenarioName, items }: ForensicEvidenceChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -56,11 +56,11 @@ export default function ScenarioInventoryChat({ scenarioName, items }: ScenarioI
       <div className="p-5 border-b border-[#F5F5F7] bg-white flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-            <BrainCircuit size={20} className="text-purple-500" />
+            <Fingerprint size={20} className="text-purple-500" />
           </div>
           <div>
-            <span className="text-xs font-bold uppercase tracking-widest text-[#86868B] block">Surface Intelligence</span>
-            <span className="text-[11px] font-bold text-[#1D1D1F] line-clamp-1">{scenarioName} Context</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-[#86868B] block">Forensic Intelligence</span>
+            <span className="text-[11px] font-bold text-[#1D1D1F] line-clamp-1">{scenarioName} Triage</span>
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1D1D1F] text-white">
@@ -76,9 +76,9 @@ export default function ScenarioInventoryChat({ scenarioName, items }: ScenarioI
               <div className="w-16 h-16 rounded-full bg-[#F5F5F7] flex items-center justify-center mb-6">
                 <Database size={32} className="text-[#D2D2D7]" />
               </div>
-              <h3 className="text-sm font-bold text-[#1D1D1F] mb-2">Discuss Scenario Inventory</h3>
+              <h3 className="text-sm font-bold text-[#1D1D1F] mb-2">Evidence Triage Chat</h3>
               <p className="text-xs text-[#86868B] max-w-[240px] leading-relaxed">
-                Analyze the {items.length} surface components identified for this attack scenario. Explore tradecraft, hardening, and detection strategies.
+                Analyze the {items.length} high-signal evidence markers from this attack. Explore chain of custody and tradecraft links.
               </p>
             </div>
           )}
@@ -124,7 +124,7 @@ export default function ScenarioInventoryChat({ scenarioName, items }: ScenarioI
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Search inventory intelligence..."
+            placeholder="Triage evidence markers..."
             className="rounded-2xl h-14 pl-6 pr-14 border-[#D2D2D7] bg-[#FBFBFD] focus-visible:ring-purple-500 placeholder:text-[#86868B]"
             disabled={isLoading}
           />
@@ -138,7 +138,7 @@ export default function ScenarioInventoryChat({ scenarioName, items }: ScenarioI
           </Button>
         </form>
         <p className="text-[10px] text-center text-[#86868B] mt-4 font-bold uppercase tracking-widest">
-          Correlating {items.length} telemetry points in real-time
+          Correlating {items.length} evidence markers in real-time
         </p>
       </div>
     </div>

@@ -158,7 +158,7 @@ export default function GapAnalysis() {
                             AI GENERATED
                           </Badge>
                         </div>
-                        <div className="prose prose-sm max-w-none prose-blue prose-p:leading-relaxed prose-strong:text-blue-700 prose-code:bg-blue-50 prose-code:text-blue-600 prose-code:px-1 prose-code:rounded">
+                        <div className="markdown-body">
                           <ReactMarkdown>{aiReasoning[gapId]}</ReactMarkdown>
                         </div>
                         <div className="pt-4 border-t border-blue-50 flex items-center gap-2 text-[10px] text-[#86868B] font-bold uppercase tracking-widest">

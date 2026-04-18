@@ -20,6 +20,7 @@ import {
   Settings,
   Sliders,
   Shield,
+  Swords,
   History,
   Plus,
   Trash2,
@@ -31,7 +32,6 @@ import {
   Copy,
   Check,
   HelpCircle,
-  Swords
 } from 'lucide-react';
 import { 
   Tooltip,
@@ -578,7 +578,7 @@ export default function AttackScenarios() {
                                     <Sparkles size={20} />
                                     <span className="text-xs font-bold uppercase tracking-widest">Behavioral Analysis</span>
                                   </div>
-                                  <div className="prose prose-sm max-w-none prose-blue prose-p:leading-relaxed prose-strong:text-blue-700 prose-code:bg-white prose-code:text-blue-600 prose-code:px-1 prose-code:rounded prose-code:border prose-code:border-blue-100">
+                                  <div className="markdown-body">
                                     <ReactMarkdown>{aiAnalysis || ''}</ReactMarkdown>
                                   </div>
                                 </div>
@@ -777,6 +777,22 @@ export default function AttackScenarios() {
                                     <p className="text-[10px] text-[#424245] leading-tight line-clamp-2">
                                       {signal.description}
                                     </p>
+                                    <div className="mt-3 space-y-2">
+                                       <div className="flex gap-2 p-2 rounded-xl bg-orange-50/50 border border-orange-100">
+                                         <Swords size={12} className="text-orange-500 shrink-0 mt-0.5" />
+                                         <div className="space-y-1">
+                                           <p className="text-[9px] font-bold text-orange-600 uppercase tracking-widest">Attacker Intent</p>
+                                           <p className="text-[10px] text-orange-900 leading-tight italic">"{step.attacker_thought_before || 'Executing core of tradecraft payload.'}"</p>
+                                         </div>
+                                       </div>
+                                       <div className="flex gap-2 p-2 rounded-xl bg-blue-50/50 border border-blue-100">
+                                         <Shield size={12} className="text-blue-500 shrink-0 mt-0.5" />
+                                         <div className="space-y-1">
+                                           <p className="text-[9px] font-bold text-blue-600 uppercase tracking-widest">Defender Strategy</p>
+                                           <p className="text-[10px] text-blue-900 leading-tight italic">"{step.defender_thought_before || 'Monitoring for process anomalies and invariant violations.'}"</p>
+                                         </div>
+                                       </div>
+                                    </div>
                                     {signal.command_line && (
                                       <div className="mt-1 relative group/cmd">
                                         <div className="flex items-center gap-1 mb-1 text-[8px] font-bold text-pink-500/50 uppercase tracking-tighter">

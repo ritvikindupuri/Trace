@@ -23,6 +23,7 @@ import {
   ArrowUpDown, 
   ExternalLink,
   Info,
+  Activity,
   Database,
   Target,
   HelpCircle,
@@ -127,6 +128,7 @@ export default function TelemetryExplorer() {
       case 'file_system': return 'bg-orange-100 text-orange-700 border-orange-200';
       case 'privilege': return 'bg-red-100 text-red-700 border-red-200';
       case 'tcc': return 'bg-pink-100 text-pink-700 border-pink-200';
+      case 'sip': return 'bg-indigo-100 text-indigo-700 border-indigo-200';
       case 'xprotect': return 'bg-cyan-100 text-cyan-700 border-cyan-200';
       case 'credential_access': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
       case 'discovery': return 'bg-gray-100 text-gray-700 border-gray-200';
@@ -284,6 +286,7 @@ export default function TelemetryExplorer() {
                     Category {getSortIcon('category')}
                   </div>
                 </TableHead>
+                <TableHead className="w-[130px] text-xs font-semibold text-[#86868B] uppercase tracking-wider">Signing</TableHead>
                 <TableHead 
                   className="w-[200px] text-xs font-semibold text-[#86868B] uppercase tracking-wider cursor-pointer hover:text-[#1D1D1F] transition-colors"
                   onClick={() => handleSort('process_name')}
@@ -326,7 +329,37 @@ export default function TelemetryExplorer() {
                         {event.category}
                       </Badge>
                     </TableCell>
-                    <TableCell className="font-medium text-sm">{event.process_name}</TableCell>
+                    <TableCell>
+                      {event.codesigning ? (
+                        <div className="flex flex-col gap-0.5">
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[9px] font-bold uppercase w-fit ${
+                              event.codesigning.status === 'signed_apple' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                              event.codesigning.status === 'signed_dev' ? 'bg-green-50 text-green-700 border-green-200' :
+                              'bg-red-50 text-red-700 border-red-200'
+                            }`}
+                          >
+                            {event.codesigning.status.replace('_', ' ')}
+                          </Badge>
+                          <span className="text-[9px] text-[#86868B] font-mono truncate max-w-[100px]">
+                            {event.codesigning.signing_id}
+                          </span>
+                        </div>
+                      ) : (
+                        <Badge variant="outline" className="bg-gray-50 text-gray-500 border-gray-200 text-[9px] font-bold">LEGACY / UNKNOWN</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-medium text-sm">
+                      <div className="flex flex-col">
+                        <span>{event.process_name}</span>
+                        {event.es_category && (
+                          <span className={`text-[8px] font-bold tracking-tighter ${event.es_category === 'AUTH' ? 'text-red-500' : 'text-blue-500'}`}>
+                            ESF_{event.es_category}
+                          </span>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       {event.mitre_mapping ? (
                         <div className="flex items-center gap-1.5">
@@ -507,6 +540,72 @@ export default function TelemetryExplorer() {
                   )}
                 </div>
               )}
+
+              <Separator />
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-[#1D1D1F]">
+                  <Terminal size={16} className="text-blue-500" />
+                  <h4 className="text-xs font-bold uppercase tracking-widest">Investigation Commands</h4>
+                </div>
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="p-4 rounded-2xl bg-[#1D1D1F] text-white font-mono text-[10px] space-y-2 border border-white/10 shadow-inner group/cmd cursor-default">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 opacity-50">
+                        <Activity size={12} />
+                        <span className="uppercase tracking-widest">eslogger hunt</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 opacity-0 group-hover/cmd:opacity-100 transition-opacity"
+                        onClick={() => handleCopy(`sudo eslogger ${selectedEvent?.event_type || 'exec'} | grep ${selectedEvent?.process_name}`, 'eslogger')}
+                      >
+                        {copiedId === 'eslogger' ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+                      </Button>
+                    </div>
+                    <code className="block text-blue-400">sudo eslogger {selectedEvent?.event_type || 'exec'} | grep {selectedEvent?.process_name}</code>
+                  </div>
+                  
+                  <div className="p-4 rounded-2xl bg-[#1D1D1F] text-white font-mono text-[10px] space-y-2 border border-white/10 shadow-inner group/osq cursor-default">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 opacity-50">
+                        <Database size={12} />
+                        <span className="uppercase tracking-widest">osquery artifacts</span>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-5 w-5 opacity-0 group-hover/osq:opacity-100 transition-opacity"
+                        onClick={() => {
+                          const query = selectedEvent?.category === 'persistence' 
+                            ? `SELECT * FROM launchd WHERE name LIKE '%${selectedEvent?.process_name}%';`
+                            : selectedEvent?.category === 'execution'
+                            ? `SELECT * FROM processes WHERE name = '${selectedEvent?.process_name}';`
+                            : `SELECT * FROM file WHERE path = '${selectedEvent?.file_path || '/tmp'}';`;
+                          handleCopy(query, 'osquery');
+                        }}
+                      >
+                        {copiedId === 'osquery' ? <Check size={10} className="text-green-400" /> : <Copy size={10} />}
+                      </Button>
+                    </div>
+                    <code className="block text-green-400 hover:text-green-300 transition-colors">
+                      {selectedEvent?.category === 'persistence' 
+                        ? `SELECT * FROM launchd WHERE name LIKE '%${selectedEvent?.process_name}%';`
+                        : selectedEvent?.category === 'execution'
+                        ? `SELECT * FROM processes WHERE name = '${selectedEvent?.process_name}';`
+                        : `SELECT * FROM file WHERE path = '${selectedEvent?.file_path || '/tmp'}';`}
+                    </code>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 text-[10px] text-blue-600 font-bold bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                <Info size={16} className="shrink-0" />
+                <span className="leading-tight">
+                  This event was captured via the <strong>{selectedEvent?.source?.toUpperCase() || 'UNKNOWN'}</strong> subsystem. Use the commands above to verify findings on a live macOS host.
+                </span>
+              </div>
             </div>
           </ScrollArea>
           <div className="flex justify-end pt-4">

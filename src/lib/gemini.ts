@@ -177,24 +177,25 @@ export async function explainAttackScenario(scenarioName: string, description: s
       Scenario: ${scenarioName}
       Description: ${description}
       
-      Structure your response using the following format:
+      Structure your response using the following markdown format:
+
       ### 1. Attack Summary
       Provide a concise, human-readable summary of the attack vector and its objectives.
       
       ### 2. Adversary Workflow
-      Use a bulleted list to describe the step-by-step technical workflow an adversary would follow.
+      Describe the step-by-step technical workflow an adversary would follow. Use a clear bulleted list with bold headings for each stage.
       
       ### 3. Telemetry & Detection Signals
-      Use a bulleted list to specify exactly what an analyst should look for in telemetry logs:
-      * **Process Events**: (e.g., specific process names, parent-child relationships)
-      * **File System**: (e.g., sensitive file paths, unusual extensions)
-      * **Network Activity**: (e.g., C2 patterns, non-standard ports)
-      * **macOS Specifics**: (e.g., TCC, XProtect, Gatekeeper overrides)
+      Specify exactly what an analyst should look for in telemetry logs. Use a bulleted list with detailed sub-bullets:
+      * **Process Events**: parent-child relationships, unusual signing identities, etc.
+      * **File System**: sensitive file paths, persistence plists, etc.
+      * **Network Activity**: C2 patterns, non-standard port usage, etc.
+      * **macOS Specifics**: TCC bypasses, XProtect alerts, Gatekeeper overrides, etc.
       
       ### 4. Hardening Recommendations
-      Provide 2-3 actionable steps to mitigate this specific threat.
+      Provide unique, actionable steps to mitigate this specific threat.
       
-      Use bold text for emphasis and ensure proper spacing between sections. Keep the tone professional and research-oriented.`;
+      CRITICAL: You must use **double newlines** between every paragraph, every header, and every list item to ensure perfect readability in the UI. Keep the tone professional, authoritative, and research-oriented. Use bold text for technical terms and emphasis.`;
 
     const text = await callGeminiWithRetry(prompt);
     return text;
@@ -206,12 +207,25 @@ export async function explainAttackScenario(scenarioName: string, description: s
 
 export async function analyzeTelemetryGap(gapReason: string, impact: string) {
   try {
-    const prompt = `As a detection engineer, provide a brief analyst-facing reasoning for the following telemetry gap:
+    const prompt = `As a detection engineer, provide a professional analyst-facing reasoning for the following macOS telemetry gap:
       
       Reason: ${gapReason}
       Impact: ${impact}
       
-      Explain why this gap is critical and what alternative signals might be used if this primary signal is missing.`;
+      Structure your response with:
+      ### 1. Root Cause Analysis
+      Detailed technical explanation of why the signal is missing (e.g. SIP, ESF filter exclusion, TCC restrictions).
+      
+      ### 2. Detection Remediation
+      Provide an actionable code snippet to address this gap. For example:
+      - A specific **ESF configuration** command.
+      - An **osquery query** to hunt for the artifact.
+      - A **Swift/C snippet** using EndpointSecurity framework to subscribe to the missing event.
+      
+      ### 3. Alternative Signals
+      List other macOS artifacts that could indicate similar tradecraft.
+      
+      Use professional language, proper spacing, and bold text for emphasis.`;
 
     const text = await callGeminiWithRetry(prompt);
     return text;
@@ -238,13 +252,28 @@ export async function generateAttackScenario(prompt: string) {
             "description": "Step description",
             "mitre_mapping": { "tactic": "Tactic Name", "technique_id": "TXXXX", "technique_name": "Technique Name" },
             "expected_signals": [
-              { "event_type": "type", "category": "execution|persistence|file_system|network|privilege|tcc|sip|xprotect", "description": "Signal description", "process_name": "optional", "command_line": "optional", "file_path": "optional" }
+              { 
+                "event_type": "type", 
+                "category": "execution|persistence|file_system|network|privilege|tcc|sip|xprotect", 
+                "description": "Signal description", 
+                "process_name": "optional", 
+                "command_line": "optional", 
+                "file_path": "optional",
+                "metadata": {
+                   "codesigning": {
+                      "signing_id": "com.apple.bash",
+                      "team_id": "APPLE",
+                      "status": "signed_apple"
+                   },
+                   "es_category": "AUTH"
+                }
+              }
             ]
           }
         ]
       }
       
-      Ensure the scenario is technically accurate for macOS. Return ONLY the JSON object.`;
+      Ensure the scenario is technically accurate for macOS. Use realistic signing IDs and ESF event categories. Return ONLY the JSON object.`;
 
     const text = await callGeminiWithRetry(aiPrompt);
     if (!text) throw new Error("No response from Gemini");
@@ -298,7 +327,8 @@ function getFallbackSurface() {
         name: "System Integrity Protection",
         status: "secure",
         description: "SIP is enabled and protecting system directories from unauthorized modification.",
-        last_checked: new Date().toISOString()
+        last_checked: new Date().toISOString(),
+        tactic: "Defense Evasion"
       },
       {
         id: "surf-2",
@@ -306,7 +336,8 @@ function getFallbackSurface() {
         name: "Full Disk Access: Terminal",
         status: "warning",
         description: "Terminal.app has Full Disk Access, which could be leveraged by malicious scripts.",
-        last_checked: new Date().toISOString()
+        last_checked: new Date().toISOString(),
+        tactic: "TCC"
       },
       {
         id: "surf-3",
@@ -314,7 +345,8 @@ function getFallbackSurface() {
         name: "Unsigned LaunchAgent",
         status: "vulnerable",
         description: "Detected an unsigned LaunchAgent in ~/Library/LaunchAgents/com.sys.update.plist.",
-        last_checked: new Date().toISOString()
+        last_checked: new Date().toISOString(),
+        tactic: "Persistence"
       }
     ],
     recommendations: [
@@ -351,7 +383,22 @@ export async function bootstrapSystem() {
                 "description": "Step description",
                 "mitre_mapping": { "tactic": "Tactic", "technique_id": "TXXXX", "technique_name": "Technique" },
                 "expected_signals": [
-                  { "event_type": "type", "category": "execution|persistence|file_system|network|privilege|tcc|sip|xprotect", "description": "Signal description", "process_name": "optional", "command_line": "optional", "file_path": "optional" }
+                  { 
+                    "event_type": "type", 
+                    "category": "execution|persistence|file_system|network|privilege|tcc|sip|xprotect", 
+                    "description": "Signal description", 
+                    "process_name": "optional", 
+                    "command_line": "optional", 
+                    "file_path": "optional",
+                    "metadata": {
+                       "codesigning": {
+                          "signing_id": "com.apple.tccd",
+                          "team_id": "APPLE",
+                          "status": "signed_apple"
+                       },
+                       "es_category": "NOTIFY"
+                    }
+                  }
                 ]
               }
             ]
@@ -364,7 +411,7 @@ export async function bootstrapSystem() {
             "description": "Brief description",
             "time": "e.g., 2m ago",
             "severity": "info" | "warning" | "critical",
-            "details": "Deep technical details"
+            "details": "Deep technical details about macOS artifacts (e.g., CSR flags, KEXT approval, TCC database entries)"
           }
         ],
         "surface": [
@@ -373,25 +420,25 @@ export async function bootstrapSystem() {
             "category": "sip_config" | "tcc_permission" | "launch_item" | "system_extension" | "gatekeeper" | "xprotect",
             "name": "Name",
             "status": "secure" | "warning" | "vulnerable",
-            "description": "Description",
+            "description": "Technical description using professional terms (CSR, AMFI, BPR, etc.)",
             "last_checked": "ISO timestamp",
             "tactic": "MITRE Tactic"
           }
         ],
         "recommendations": [
-          { "title": "Title", "desc": "Description", "insight": "Insight" }
+          { "title": "Title", "desc": "Description", "insight": "Security research context with technical depth" }
         ],
         "researchAlignment": {
           "headline": "Current Research Focus",
           "description": "Detailed alignment with emerging threats",
-          "analystTip": "Actionable tip",
-          "researchFocus": "Specific technical focus area"
+          "analystTip": "Actionable technical tip",
+          "researchFocus": "Specific technical focus area (e.g., IOKit exploitation, Entitlements analysis)"
         }
       }
       
       Generate exactly 10 unique scenarios, 10 anomalies, 8 surface items, 5 recommendations, and 1 research alignment object.
-      IMPORTANT: Each attack scenario MUST have at least 3-5 sequential steps to model a complete adversary workflow (e.g., Initial Access -> Execution -> Persistence -> Exfiltration).
-      Ensure all content is technically accurate for macOS security research.
+      IMPORTANT: Each attack scenario MUST have at least 3-5 sequential steps to model a complete adversary workflow.
+      Ensure all content is 1000000% useful for a macOS security engineer—use specific macOS pathnames, binary names, and framework names.
       Return ONLY the JSON object.`;
 
     const text = await callGeminiWithRetry(prompt);
@@ -457,7 +504,7 @@ export async function chatAboutScenarioInventory(scenarioName: string, items: an
             Inventory Items: ${JSON.stringify(items)}
             
             Your goal is to provide deep technical insights into how these items were impacted by the scenario, explain the tradecraft involved in their creation or modification, and suggest specific hardening steps for each. 
-            Keep the tone professional, authoritative, and research-oriented. Use proper spacing, headers, and bolding for readability.`
+            Keep the tone professional, authoritative, and research-oriented. You MUST use double newlines between paragraphs, headers, and list items for perfect readability. Use bolding for emphasis.`
       },
       history: history.map(h => ({ role: h.role, content: { parts: [{ text: h.parts }] } }))
     });
@@ -535,19 +582,20 @@ export async function fetchLatestMacOSThreats() {
 
 export async function getSimulationAdvisorNotification(scenarioName: string, runCount: number) {
   try {
-    const prompt = `You are a macOS security simulation advisor. A security engineer has run the attack scenario "${scenarioName}" ${runCount} times. 
+    const prompt = `You are a Lead macOS Security Simulation Advisor. A security researcher has executed the attack scenario "${scenarioName}" ${runCount} times. 
       
-      Your goal is to decide if the user has run this simulation enough times to understand the attack's evolution. 
-      Usually, 3-5 runs are sufficient for most scenarios, but it depends on the complexity.
+      Your objective is to provide expert guidance on whether further iterations are beneficial or if they should pivot to tradecraft variations to stress-test their detection logic.
+      
+      Consider:
+      - At 1-2 runs: Advise on establishing a telemetry baseline.
+      - At 3-4 runs: Advise on tradecraft variations (e.g., "Try shifting from base64 encoding to hex or binary-packing to see if your ESF detections are robust against obfuscation").
+      - At 5+ runs: Advise that sufficient data for this specific tradecraft has likely been collected and suggest exploring a different MITRE Tactic.
       
       Return a JSON object:
       {
         "shouldNotify": boolean,
-        "message": "A brief, professional notification message advising them if they have enough data."
+        "message": "A high-fidelity, technical advisory message. Use professional macOS security terminology (e.g., 'sub-process execution', 'ESF notification latency', 'entitlement-based bypass')."
       }
-      
-      If shouldNotify is true, the message should explain that enough data has been collected to understand the tradecraft evolution.
-      If shouldNotify is false, the message can be empty or a brief encouragement.
       
       Return ONLY the JSON object.`;
 

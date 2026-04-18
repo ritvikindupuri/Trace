@@ -92,7 +92,7 @@ export default function VisibilityChatbot({ scores, onClose }: VisibilityChatbot
                       ? 'bg-[#1D1D1F] text-white rounded-tr-none' 
                       : 'bg-white border border-[#D2D2D7] text-[#1D1D1F] rounded-tl-none'
                   }`}>
-                    <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-headings:text-[#1D1D1F] prose-headings:font-bold prose-strong:text-inherit">
+                    <div className="markdown-body">
                       <ReactMarkdown>{m.parts}</ReactMarkdown>
                     </div>
                   </div>

@@ -1,5 +1,5 @@
 {
   "name": "Trace",
-  "description": "macOS telemetry intelligence and adversary behavior analysis platform. Model system behavior, analyze tradecraft, and identify telemetry gaps.",
+  "description": "macOS endpoint hardening assistant for security engineers. Audit security posture, review MDM profiles, and generate remediation playbooks from real system artifacts.",
   "requestFramePermissions": []
 }
